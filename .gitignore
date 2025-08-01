@@ -1,0 +1,67 @@
+# Byte-compiled / cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# Virtual environments
+.env
+.venv/
+env/
+venv/
+ENV/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# Logs and local reports
+*.log
+*.out
+*.tmp
+logs/
+reports/
+
+# Model files
+*.h5
+*.hdf5
+*.keras
+*.ckpt
+*.pb
+*.tflite
+checkpoints/
+models/
+
+# Tokenizer / vocab files
+tokenizer*.json
+
+# Datasets and raw data
+data/
+*.csv
+*.tsv
+*.xlsx
+
+# VS Code settings
+.vscode/
+
+# OS generated
+.DS_Store
+Thumbs.db
+
+# Pytest
+.cache/
+
+# MyPy, Pylint, Coverage
+.mypy_cache/
+.pytest_cache/
+coverage.xml
+htmlcov/
+
+# Test results
+test-output/
