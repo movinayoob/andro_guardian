@@ -4,7 +4,7 @@ import os
 import random
 import tensorflow as tf
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, roc_curve, auc
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense, Dropout, Input, BatchNormalization,Embedding,Bidirectional
 from tensorflow.keras.callbacks import EarlyStopping
@@ -24,7 +24,6 @@ set_seed(42)
 
 print("📁 Loading data...")
 df = pd.read_csv("data/processed/covearge_sequential_syscall_40k_400_107.csv")
-df = df[:2000] 
 X = df.drop("label", axis=1).values
 y = df["label"].values
 
@@ -394,6 +393,29 @@ def evaluate_final_lstm(best_params):
 
     plt.tight_layout()
     plt.show()
+
+    # If your model predicts probabilities
+    if hasattr(model, "predict_proba"):  # e.g., scikit-learn
+        y_score = model.predict_proba(X_test)[:, 1]
+    else:  # e.g., Keras model
+        y_score = model.predict(X_test).ravel()  # or model.predict(X_test)[:, 1] if one-hot
+
+    fpr, tpr, thresholds = roc_curve(y_true, y_score)
+    roc_auc = auc(fpr, tpr)
+
+    # Plot ROC in a new figure or subplot
+    plt.figure(figsize=(6, 5))
+    plt.plot(fpr, tpr, color='darkorange', lw=2, label=f'ROC Curve (AUC = {roc_auc:.4f})')
+    plt.plot([0, 1], [0, 1], color='navy', linestyle='--', lw=1)
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('Receiver Operating Characteristic (ROC) Curve')
+    plt.legend(loc='lower right')
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
 # ------------------------------
 # Run Main
 # ------------------------------
@@ -419,7 +441,7 @@ if __name__ == "__main__":
 
         print("\n🏆 Best Hyperparameters:")
         print(f"Units: {int(best_params[0])}, {int(best_params[1])}, {int(best_params[2])}")
-        print(f"Dropout: {best_params[3]:.2f}, LR: {10**best_params[4]:.5f}, Batch Size: {int(best_params[5])}")
+        print(f"Dropout: {best_params[3]:.2f}, LR: {10**best_params[4]:.5f}, Batch Size: {int(best_params[5])}, output_dim : {int(best_params[6])}")
         print(f"Best Val Acc: {-best_score:.4f}")
         print("\nRefined bounds for next PSO run:")
         print("New Lower Bounds:", new_lb)
