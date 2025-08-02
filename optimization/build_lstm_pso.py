@@ -24,6 +24,7 @@ set_seed(42)
 
 print("📁 Loading data...")
 df = pd.read_csv("data/processed/covearge_sequential_syscall_40k_400_107.csv")
+df = df[:2000] 
 X = df.drop("label", axis=1).values
 y = df["label"].values
 
@@ -84,7 +85,8 @@ print("✅ Data loaded and split")
 def fitness(params):
     try:
         print(f"🔍 Evaluating params: {params}")
-        units1, units2, units3, dropout, lr, batch_size = params
+        units1, units2, units3, dropout, lr, batch_size, output_dim = params
+        output_dim = int(output_dim)
         units1, units2, units3 = int(units1), int(units2), int(units3)
         dropout = float(dropout)
         lr = 10 ** lr
@@ -92,7 +94,7 @@ def fitness(params):
         vocab_size = int(np.max(X_train)) + 1
 
         inputs = Input(shape=(X_train.shape[1],))
-        x = Embedding(input_dim=vocab_size, output_dim=16, mask_zero=True)(inputs)
+        x = Embedding(input_dim=vocab_size, output_dim=output_dim, mask_zero=True)(inputs)
     
         x = Bidirectional(LSTM(units1, return_sequences=True))(x)
         x = BatchNormalization()(x)
@@ -301,12 +303,13 @@ def evaluate_final_lstm(best_params):
     dropout_rate = best_params[3]
     learning_rate = 10 ** best_params[4]
     batch_size = int(best_params[5])
+    output_dim = int(best_params[6])
     vocab_size = int(np.max(X_train)) + 1
 
 
     # Functional API
     inputs = Input(shape=(X_train.shape[1],))
-    x = Embedding(input_dim=vocab_size, output_dim=16, mask_zero=True)(inputs)
+    x = Embedding(input_dim=vocab_size, output_dim=output_dim, mask_zero=True)(inputs)
     
     x = Bidirectional(LSTM(units1, return_sequences=True))(x)
     x = BatchNormalization()(x)
@@ -397,8 +400,8 @@ def evaluate_final_lstm(best_params):
 if __name__ == "__main__":
     try:
         print("🚦 Running custom PSO...")
-        lb = [32, 30, 16, 0.1, np.log10(0.0001), 64]
-        ub = [128, 64, 32, 0.4, np.log10(0.01), 128]
+        lb = [32, 30, 16, 0.1, np.log10(0.0001), 64, 64]
+        ub = [128, 64, 32, 0.4, np.log10(0.01), 128, 128]
 
         #lb = [32.25506836, 41.62744294, 20.34665322, 0.18653944, -4.0, 90.73930026]   # Lower bounds
         #ub = [99.15968843, 61.63485621, 26.38442986, 0.34293094, -3.54632059, 126.10082337]  # Upper bounds
@@ -407,7 +410,7 @@ if __name__ == "__main__":
             fitness_fn=fitness,
             lb=lb,
             ub=ub,
-            dim=6,
+            dim=7,
             num_particles=3,
             max_iter=2,
             num_informants=1,
