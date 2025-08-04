@@ -7,9 +7,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tokenizer_util import save_tokenizer,load_tokenizer,process_batch,enforce_whitelist
 import os
+import matplotlib.ticker as ticker
+
+import seaborn as sns
 # -------------------------------
 # ARGPARSE CONFIGURATION
 # -------------------------------
+""" python extraction/coverage_based_vocab_builder.py --limit 10000 --vocab_file coverage_tokenizer_test_syscall --output_csv data/processed/covearge_sequential_test_syscall """
 parser = argparse.ArgumentParser(description="Syscall sequence tokenizer and saver")
 
 parser.add_argument("--batch_size", type=int, default=500, help="Number of files per batch")
@@ -70,17 +74,72 @@ WHITELIST_SYSCALLS = [
 ]
 print("📥 Fitting tokenizer on a sample...")
 sample_sequences = []
-for file_path, _ in all_files[:2000]:
+sequence_lengths = []
+for file_path, _ in all_files:
+    #sequence = read_syscall_sequence(file_path)
+    sequence_lengths.append(len(read_syscall_sequence(file_path)))
     sample_sequences.append(' '.join(read_syscall_sequence(file_path)))
 
+sequence_lengths = np.array(sequence_lengths)
+print("Mean:", np.mean(sequence_lengths))
+print("Median:", np.median(sequence_lengths))
+print("Max:", np.max(sequence_lengths))
+print("95th percentile:", np.percentile(sequence_lengths, 95))
+MAX_LEN = int(np.percentile(sequence_lengths, 95))  # e.g., 400
+print("95:",int(np.percentile(sequence_lengths, 95)))
+print("85:",int(np.percentile(sequence_lengths, 85)))
+print("75:",int(np.percentile(sequence_lengths, 75)))
+
+plt.figure(figsize=(10, 5))
+plt.gca().xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
+plt.hist(sequence_lengths, bins=50, color='skyblue', edgecolor='black')
+plt.axvline(int(np.percentile(sequence_lengths, 75)), color='green', linestyle='--', label=f'75th Percentile')
+plt.axvline(int(np.percentile(sequence_lengths, 85)), color='blue', linestyle='--', label=f'85th Percentile')
+plt.axvline(int(np.percentile(sequence_lengths, 95)), color='red', linestyle='--', label=f'95th Percentile')
+
+plt.title("Syscall Sequence Length Distribution")
+plt.xlabel("Sequence Length")
+plt.ylabel("Number of Samples")
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+sample_sequences = []
 #tokenizer = Tokenizer(lower=True, oov_token="<OOV>")
 #tokenizer.fit_on_texts(sample_sequences)
 #tokenizer = enforce_whitelist(tokenizer, WHITELIST_SYSCALLS)
-
+for file_path, _ in all_files[:3000]:
+    #sequence = read_syscall_sequence(file_path)
+    #sequence_lengths.append(len(read_syscall_sequence(file_path)))
+    sample_sequences.append(' '.join(read_syscall_sequence(file_path)))
 all_syscalls = ' '.join(sample_sequences).split()
 
 # Step 2: Count syscall frequencies
 freq_dist = Counter(all_syscalls)
+
+# Filter to only whitelist
+whitelist_counts = {k: freq_dist.get(k, 0) for k in WHITELIST_SYSCALLS}
+whitelist_counts = {k: v for k, v in whitelist_counts.items() if v > 0}  # optional: remove unused
+# Plot
+plt.figure(figsize=(12, 5))
+sns.barplot(x=list(whitelist_counts.keys()), y=list(whitelist_counts.values()))
+plt.xticks(rotation=90)
+plt.title("Whitelist Syscall Frequencies")
+plt.xlabel("Syscall")
+plt.ylabel("Frequency")
+plt.tight_layout()
+plt.savefig("whitelist_syscall_frequencies.png")
+plt.show()
+
+used = sum(1 for k in WHITELIST_SYSCALLS if freq_dist.get(k, 0) > 0)
+unused = len(WHITELIST_SYSCALLS) - used
+
+plt.figure(figsize=(5, 5))
+plt.pie([used, unused], labels=["Used", "Unused"], autopct="%1.1f%%", colors=["#66c2a5", "#fc8d62"])
+plt.title("Whitelist Syscall Coverage")
+plt.savefig("whitelist_usage_pie.png")
+plt.show()
+
 
 # Step 3: Sort frequencies in descending order
 sorted_freqs = sorted(freq_dist.values(), reverse=True)
@@ -91,12 +150,16 @@ cumulative = np.cumsum(sorted_freqs)
 coverage = cumulative / total_count
 
 # Step 5: Find the smallest N that covers 95% (or any other threshold)
-target_coverage = 0.98
+target_coverage = 0.95
 num_words = int(np.argmax(coverage >= target_coverage) + 1 ) # +1 for correct index
 
 # Combine whitelist with top-N
 top_syscalls = [word for word, _ in freq_dist.most_common(num_words)]
-final_vocab = list(set(top_syscalls).union(set(WHITELIST_SYSCALLS)))
+used_syscalls = set(' '.join(sample_sequences).split())
+# Filter the whitelist to only include syscalls that actually appear
+filtered_whitelist = [s for s in WHITELIST_SYSCALLS if s in used_syscalls]
+
+final_vocab = list(set(top_syscalls).union(set(filtered_whitelist)))
 num_words = len(final_vocab) + 1  # +1 to account for OOV token
 # Filter sequences to only include syscalls in final vocab
 filtered_sequences = [' '.join([word for word in seq.split() if word in final_vocab]) for seq in sample_sequences]

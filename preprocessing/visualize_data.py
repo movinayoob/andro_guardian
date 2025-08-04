@@ -5,32 +5,10 @@ from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 import umap
 
-def plot_umap_projection():
-    X = df.drop("label", axis=1)
-    y = df["label"]
-    
-    reducer = umap.UMAP(n_components=2, n_neighbors=15, min_dist=0.1, random_state=42)
-    X_umap = reducer.fit_transform(X)
-
-    plt.figure(figsize=(8, 6))
-    sns.scatterplot(x=X_umap[:, 0], y=X_umap[:, 1], hue=y, palette="coolwarm", alpha=0.6)
-    plt.title("UMAP Projection (2D)")
-    plt.xlabel("UMAP Component 1")
-    plt.ylabel("UMAP Component 2")
-    plt.text(
-        x=min(X_umap[:, 0]) + 0.5,   # position near the bottom-left
-        y=min(X_umap[:, 1]) + 0.5,
-        s="Sequential System calls",           # your name or label
-        fontsize=10,
-        color="gray",
-        alpha=0.5
-    )
-    plt.legend(title="Label")
-    plt.savefig("reports/mi_seq_umap_2d_projection.png")
-    plt.close()
 
 # Load cleaned dataset
-df = pd.read_csv("data/processed/coverage_sequential_syscall_28.csv")
+file_name = "cleaned_data"
+df = pd.read_csv(f"data/processed/{file_name}.csv")
 
 # ----------------------------
 # 1. Class Distribution
@@ -41,13 +19,13 @@ def plot_class_distribution():
     plt.title("Class Distribution")
     plt.xlabel("Class")
     plt.ylabel("Count")
-    plt.savefig("reports/10_seq_class_distribution.png")
+    plt.savefig(f"new_figures/{file_name}_class_distribution.png")
     plt.close()
 
 # ----------------------------
 # 2. Top N Most Active Syscalls
 # ----------------------------
-def plot_top_syscalls(n=20):
+def plot_top_syscalls(n=30):
     syscall_totals = df.drop("label", axis=1).sum().sort_values(ascending=False).head(n)
     plt.figure(figsize=(10, 6))
     syscall_totals.plot(kind="bar")
@@ -55,7 +33,7 @@ def plot_top_syscalls(n=20):
     plt.ylabel("Total Count")
     plt.xticks(rotation=45)
     plt.tight_layout()
-    plt.savefig("reports/10_seq_top_syscalls.png")
+    plt.savefig(f"new_figures/{file_name}_class_op_syscalls.png")
     plt.close()
 
 # ----------------------------
@@ -67,7 +45,7 @@ def plot_correlation_heatmap():
     corr = sample_df.corr()
     sns.heatmap(corr, cmap="coolwarm", linewidths=0.1)
     plt.title("Feature Correlation Heatmap (Sampled)")
-    plt.savefig("reports/10_seq_correlation_heatmap.png")
+    plt.savefig(f"new_figures/{file_name}_class_correlation_heatmap.png")
     plt.close()
 
 # ----------------------------
@@ -86,7 +64,7 @@ def plot_pca_projection():
     plt.xlabel("Principal Component 1")
     plt.ylabel("Principal Component 2")
     plt.legend(title="Label")
-    plt.savefig("reports/10_seq_pca_2d_projection.png")
+    plt.savefig(f"new_figures/{file_name}_class_pca_2d_projection.png")
     plt.close()
 
 # ----------------------------
@@ -105,7 +83,7 @@ def plot_tsne_projection():
     plt.xlabel("t-SNE Component 1")
     plt.ylabel("t-SNE Component 2")
     plt.legend(title="Label")
-    plt.savefig("reports/10_seq_tsne_2d_projection.png")
+    plt.savefig(f"new_figures/{file_name}_class_tsne_2d_projection.png")
     plt.close()
 
 # ----------------------------
@@ -124,7 +102,7 @@ def plot_umap_projection():
     plt.xlabel("UMAP Component 1")
     plt.ylabel("UMAP Component 2")
     plt.legend(title="Label")
-    plt.savefig("reports/10_seq_umap_2d_projection.png")
+    plt.savefig(f"new_figures/{file_name}_class_umap_2d_projection.png")
     plt.close()
 
 # ----------------------------
@@ -143,4 +121,4 @@ if __name__ == "__main__":
     plot_tsne_projection()
     plot_umap_projection()
 
-    print("✅ Visualizations saved to 'reports/' folder.")
+    print("✅ Visualizations saved to 'new_figures/' folder.")

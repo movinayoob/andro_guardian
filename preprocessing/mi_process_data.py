@@ -2,6 +2,9 @@ import pandas as pd
 from sklearn.feature_selection import VarianceThreshold, mutual_info_classif
 from sklearn.preprocessing import LabelEncoder,KBinsDiscretizer
 import joblib
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.decomposition import PCA
 
 # Load the dataset
 df = pd.read_csv("data/processed/output_features_all.csv")
@@ -32,19 +35,19 @@ df_filtered["label"] = le.fit_transform(df_filtered["label"])
 X_encoded = df_filtered.drop("label", axis=1)
 y_encoded = df_filtered["label"]
 
-discretizer = KBinsDiscretizer(n_bins=10, encode='ordinal', strategy='quantile')
-X_binned_array = discretizer.fit_transform(X_encoded)
+#discretizer = KBinsDiscretizer(n_bins=2, encode='ordinal', strategy='quantile')
+#X_binned_array = discretizer.fit_transform(X_encoded)
 
 # Convert back to DataFrame to retain column names
-X_binned = pd.DataFrame(X_binned_array, columns=X_encoded.columns)
+#X_binned = pd.DataFrame(X_binned_array, columns=X_encoded.columns)
 
 # Mutual Information-based Feature Selection
 #X_mi = X_binned.drop("label", axis=1)
 #y = X_binned["label"]
 
 # Compute MI scores
-mi_scores = mutual_info_classif(X_binned, y_encoded)
-mi_series = pd.Series(mi_scores, index=X_binned.columns)
+mi_scores = mutual_info_classif(X_encoded, y_encoded, discrete_features=False)
+mi_series = pd.Series(mi_scores, index=X_encoded.columns)
 mi_series_sorted = mi_series.sort_values(ascending=False)
 
 # Select top K features based on MI (optional: change K)
@@ -56,5 +59,43 @@ df_mi_selected = df_filtered[top_features + ["label"]]
 print("Final shape after MI selection:", df_mi_selected.shape)
 
 # Save final features to CSV
-df_mi_selected.to_csv("data/processed/feature_mi_selected_120.csv", index=False)
+df_mi_selected.to_csv("data/processed/feature_mi_selected_120_5bin.csv", index=False)
+# Bar plot of top 30 features by MI score
+top_mi = mi_series_sorted.head(30)
+
+plt.figure(figsize=(10, 6))
+sns.barplot(x=top_mi.values, y=top_mi.index, palette="viridis")
+plt.xlabel("Mutual Information Score")
+plt.ylabel("Feature")
+plt.title("Top 30 Features by Mutual Information Score")
+plt.tight_layout()
+plt.savefig("new_figures/mi_top30_features.png", dpi=300)
+plt.show()
+
+X_mi = df_mi_selected.drop("label", axis=1)
+y_mi = df_mi_selected["label"]
+
+pca = PCA(n_components=2)
+X_pca = pca.fit_transform(X_mi)
+
+plt.figure(figsize=(8, 6))
+sns.scatterplot(x=X_pca[:, 0], y=X_pca[:, 1], hue=y_mi, palette=["skyblue", "salmon"], alpha=0.5)
+plt.title("PCA Projection Using Top 120 MI-Selected Features")
+plt.xlabel("Principal Component 1")
+plt.ylabel("Principal Component 2")
+plt.legend(title="Class", labels=["Benign", "Malware"])
+plt.tight_layout()
+plt.savefig("new_figures/pca_mi_features.png", dpi=300)
+plt.show()
+
+before_mi_count = X_encoded.shape[1]
+after_mi_count = len(top_features)
+
+plt.figure(figsize=(6, 4))
+sns.barplot(x=["Before MI", "After MI"], y=[before_mi_count, after_mi_count], palette="muted")
+plt.title("Feature Count Before and After MI Selection")
+plt.ylabel("Number of Features")
+plt.tight_layout()
+plt.savefig("new_figures/feature_count_reduction.png", dpi=300)
+plt.show()
 print("Saved features to features_mi_selected.csv")
